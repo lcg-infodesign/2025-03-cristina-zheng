@@ -2,10 +2,14 @@
 let volcanoTable;
 let volcanoes = [];
 let hoveredVolcano = null;
+let volcanoIcon;
+let worldMap;
 
-// === Preload: carica il dataset ===
+// === Preload: carica dataset e immagini ===
 function preload() {
-  volcanoTable = loadTable('assets/data.csv', 'csv', 'header');
+  volcanoTable = loadTable('assets/volcanoes.csv', 'csv', 'header');
+  volcanoIcon = loadImage('volcano.png');
+  worldMap = loadImage('location.png');
 }
 
 // === Setup: crea canvas e processa dati ===
@@ -19,10 +23,9 @@ function setup() {
   textAlign(CENTER, CENTER);
 }
 
-// === Estrae i dati dal CSV ===
+// === Legge il CSV ===
 function processData() {
   volcanoes = [];
-
   for (let i = 0; i < volcanoTable.getRowCount(); i++) {
     const row = volcanoTable.getRow(i);
     volcanoes.push({
@@ -33,87 +36,85 @@ function processData() {
       elev: parseFloat(row.get('Elevation (m)'))
     });
   }
-
   console.log('Vulcani caricati:', volcanoes.length);
 }
 
-// === Draw: disegna tutto ===
+// === Disegno principale ===
 function draw() {
   background(240);
 
-  // titolo e legenda
+  // mappa del mondo di sfondo
+  imageMode(CORNER);
+  image(worldMap, 0, 0, width, height);
+
+  // legenda in basso
   drawLegend();
 
-  // disegno vulcani
   hoveredVolcano = null;
   volcanoes.forEach(v => {
     const pos = project(v.lat, v.lon);
     drawVolcano(v, pos.x, pos.y);
   });
 
-  // tooltip se hover
-  if (hoveredVolcano) {
-    drawTooltip(hoveredVolcano);
-  }
+  if (hoveredVolcano) drawTooltip(hoveredVolcano);
 }
 
-// === Proiezione grezza da lat/lon a coordinate canvas ===
+// === Conversione lat/lon → coordinate canvas ===
 function project(lat, lon) {
   let x = map(lon, -180, 180, 50, width - 50);
   let y = map(lat, 90, -90, 50, height - 50);
   return { x, y };
 }
 
-// === Disegna ogni vulcano come triangolo ===
+// === Disegna icona vulcano ===
 function drawVolcano(v, x, y) {
-  let size = map(v.elev, 0, 6000, 5, 25);
-  let col = color(120);
+  let size = map(v.elev, 0, 6000, 10, 40);
   let d = dist(mouseX, mouseY, x, y);
+  let tintColor = 255;
 
-  if (d < size) {
-    col = color(255, 80, 0);
+  if (d < size / 2) {
+    tintColor = color(255, 80, 0);
     hoveredVolcano = v;
   }
 
-  push();
-  translate(x, y);
-  noStroke();
-  fill(col);
-  triangle(0, -size / 2, -size / 2, size / 2, size / 2, size / 2);
-  pop();
+  imageMode(CENTER);
+  tint(tintColor);
+  image(volcanoIcon, x, y, size, size);
+  noTint();
 }
 
 // === Disegna legenda ===
 function drawLegend() {
-  fill(0);
-  textSize(16);
-  text("Visualizzazione dei Vulcani nel Mondo", width / 2, 20);
+  fill(255, 200);
+  rect(20, height - 80, 220, 60, 10);
 
+  fill(0);
   textSize(12);
   textAlign(LEFT);
-  fill(80);
-  text("Legenda:", 60, height - 80);
-  fill(120);
-  triangle(60, height - 65, 55, height - 55, 65, height - 55);
-  text("Vulcano", 80, height - 60);
+  text("Legenda:", 40, height - 65);
+
+  imageMode(CENTER);
+  image(volcanoIcon, 50, height - 40, 20, 20);
+  fill(0);
+  text("Vulcano", 75, height - 40);
 
   fill(255, 80, 0);
-  triangle(60, height - 40, 55, height - 30, 65, height - 30);
-  text("Hover = evidenziato", 80, height - 35);
+  ellipse(190, height - 40, 12, 12);
+  fill(0);
+  text("Hover = evidenziato", 110, height - 40);
 }
 
-// === Mostra tooltip al rollover ===
+// === Tooltip con info ===
 function drawTooltip(v) {
-  let pos = project(v.lat, v.lon);
-
+  const pos = project(v.lat, v.lon);
   fill(255);
   stroke(0);
   rectMode(CENTER);
-  rect(pos.x, pos.y - 25, 180, 40, 6);
+  rect(pos.x, pos.y - 30, 180, 45, 6);
 
   noStroke();
   fill(0);
   textSize(12);
-  text(`${v.name} (${v.country})`, pos.x, pos.y - 35);
-  text(`${v.elev} m`, pos.x, pos.y - 20);
+  text(`${v.name} (${v.country})`, pos.x, pos.y - 40);
+  text(`${v.elev} m`, pos.x, pos.y - 25);
 }
